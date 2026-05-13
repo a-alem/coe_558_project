@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://api.your-domain.com";
+const API_BASE_URL = "https://api.coe558projectkfupm.com";
 
 let lastPrompt = "";
 let lastResult = "";
