@@ -37,7 +37,7 @@ def serialize_doc(doc):
     del doc["_id"]
     return doc
 
-
+# APIs
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "backend"}
