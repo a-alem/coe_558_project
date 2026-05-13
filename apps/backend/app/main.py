@@ -37,12 +37,12 @@ def serialize_doc(doc):
     del doc["_id"]
     return doc
 
-# Health API
+# Health check API
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "backend"}
 
-# GenAI APIs
+# Saved results APIs
 @app.post("/results")
 def create_result(req: ResultCreate):
     doc = {
