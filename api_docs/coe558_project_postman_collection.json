@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "COE558 Weather, GenAI, and CRUD APIs",
+    "name": "COE558 Weather, GenAI, and Backend APIs",
     "_postman_id": "7f5d7a1e-5b7c-4b4d-9a8b-0e5b3a7e2c20",
-    "description": "Postman collection for the COE558 Cloud and Edge Computing project APIs.\n\nServices:\n- S1 Weather Service: AWS Lambda behind Traefik/API Gateway\n- S2 GenAI Service: containerized FastAPI service\n- S3 CRUD Service: containerized FastAPI service backed by MongoDB and S3\n\nBefore running:\n1. Set collection variable baseUrl to your backend gateway URL, e.g. https://api.example.com.\n2. Run 'Save GenAI Result' before requests that need resultId.\n3. Replace example values as needed.",
+    "description": "Postman collection for the COE558 Cloud and Edge Computing project APIs.\n\nServices:\n- S1 Weather Service: AWS Lambda behind Traefik/API Gateway\n- S2 GenAI Service: containerized FastAPI service\n- S3 Backend Service: containerized FastAPI service backed by MongoDB and S3\n\nBefore running:\n1. Set collection variable baseUrl to your backend gateway URL, e.g. https://api.example.com.\n2. Run 'Save GenAI Result' before requests that need resultId.\n3. Replace example values as needed.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -389,11 +389,11 @@
       ]
     },
     {
-      "name": "S3 - CRUD Service",
-      "description": "Containerized CRUD service that stores GenAI prompts/results in MongoDB and optional media references in S3.",
+      "name": "S3 - Backend Service",
+      "description": "Containerized backend service that stores GenAI prompts/results in MongoDB and optional media references in S3.",
       "item": [
         {
-          "name": "Health Check - CRUD",
+          "name": "Health Check - Backend",
           "event": [
             {
               "listen": "test",
@@ -403,9 +403,9 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Service is crud', function () {",
+                  "pm.test('Service is backend', function () {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.service).to.eql('crud');",
+                  "    pm.expect(json.service).to.eql('backend');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -431,11 +431,11 @@
                 "health"
               ]
             },
-            "description": "Checks whether the CRUD service is running."
+            "description": "Checks whether the Backend service is running."
           },
           "response": [
             {
-              "name": "200 - CRUD Healthy",
+              "name": "200 - Backend Healthy",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -465,7 +465,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"status\": \"ok\",\n  \"service\": \"crud\"\n}"
+              "body": "{\n  \"status\": \"ok\",\n  \"service\": \"backend\"\n}"
             }
           ]
         },

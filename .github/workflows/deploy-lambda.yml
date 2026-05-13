@@ -25,12 +25,12 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Package Lambda
-        working-directory: apps/weather-lambda
+        working-directory: apps/weather_lambda
         run: |
           zip -r weather-lambda.zip handler.py
 
       - name: Update Lambda code
-        working-directory: apps/weather-lambda
+        working-directory: apps/weather_lambda
         run: |
           aws lambda update-function-code \
             --function-name coe558-project-weather \

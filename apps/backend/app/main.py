@@ -10,7 +10,7 @@ from pymongo import MongoClient
 
 
 app = FastAPI(
-    title="S3 CRUD Service",
+    title="S3 Backend Service",
     version="1.0.0",
 )
 
@@ -40,7 +40,7 @@ def serialize_doc(doc):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "crud"}
+    return {"status": "ok", "service": "backend"}
 
 
 @app.post("/results")

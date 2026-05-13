@@ -24,11 +24,11 @@ jobs:
             context: apps/frontend
             image: coe558-frontend
           - name: genai-service
-            context: apps/genai-service
+            context: apps/genai_service
             image: coe558-genai-service
-          - name: crud-service
-            context: apps/crud-service
-            image: coe558-crud-service
+          - name: backend
+            context: apps/backend
+            image: coe558-backend
 
     steps:
       - uses: actions/checkout@v4

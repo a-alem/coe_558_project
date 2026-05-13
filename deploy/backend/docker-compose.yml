@@ -34,9 +34,9 @@ services:
       - "traefik.http.routers.genai.middlewares=genai-strip"
       - "traefik.http.services.genai.loadbalancer.server.port=8000"
 
-  crud-service:
-    image: ghcr.io/a-alem/coe558-crud-service:latest
-    container_name: crud-service
+  backend:
+    image: ghcr.io/a-alem/coe558-backend:latest
+    container_name: backend
     restart: unless-stopped
     environment:
       MONGO_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017
@@ -50,12 +50,12 @@ services:
       - mongodb
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.crud.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/results`)"
-      - "traefik.http.routers.crud.entrypoints=websecure"
-      - "traefik.http.routers.crud.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.crud-strip.stripprefix.prefixes=/api"
-      - "traefik.http.routers.crud.middlewares=crud-strip"
-      - "traefik.http.services.crud.loadbalancer.server.port=8000"
+      - "traefik.http.routers.backend.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/results`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.backend-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.backend.middlewares=backend-strip"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
 
   mongodb:
     image: mongo:7
