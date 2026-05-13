@@ -29,7 +29,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.genai.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/genai`)"
       - "traefik.http.routers.genai.entrypoints=websecure"
+      - "traefik.http.routers.genai.tls=true"
       - "traefik.http.routers.genai.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.genai.service=genai"
       - "traefik.http.middlewares.genai-strip.stripprefix.prefixes=/api/genai"
       - "traefik.http.routers.genai.middlewares=genai-strip"
       - "traefik.http.services.genai.loadbalancer.server.port=8000"
@@ -50,11 +52,20 @@ services:
       - mongodb
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/results`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.backend-strip.stripprefix.prefixes=/api"
-      - "traefik.http.routers.backend.middlewares=backend-strip"
+      - "traefik.http.routers.backend-results.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/results`)"
+      - "traefik.http.routers.backend-results.entrypoints=websecure"
+      - "traefik.http.routers.backend-results.tls=true"
+      - "traefik.http.routers.backend-results.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-results.service=backend"
+      - "traefik.http.middlewares.backend-results-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.backend-results.middlewares=backend-results-strip"
+      - "traefik.http.routers.backend-health.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/backend`)"
+      - "traefik.http.routers.backend-health.entrypoints=websecure"
+      - "traefik.http.routers.backend-health.tls=true"
+      - "traefik.http.routers.backend-health.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-health.service=backend"
+      - "traefik.http.middlewares.backend-health-strip.stripprefix.prefixes=/api/backend"
+      - "traefik.http.routers.backend-health.middlewares=backend-health-strip"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
 
   mongodb:
@@ -83,7 +94,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.swagger.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/docs`)"
       - "traefik.http.routers.swagger.entrypoints=websecure"
+      - "traefik.http.routers.swagger.tls=true"
       - "traefik.http.routers.swagger.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.swagger.service=swagger"
+      - "traefik.http.middlewares.swagger-strip.stripprefix.prefixes=/docs"
+      - "traefik.http.routers.swagger.middlewares=swagger-strip"
       - "traefik.http.services.swagger.loadbalancer.server.port=8080"
 
 networks:

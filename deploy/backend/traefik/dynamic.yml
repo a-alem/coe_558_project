@@ -1,7 +1,7 @@
 http:
   routers:
     weather:
-      rule: "Host(`api.your-domain.com`) && PathPrefix(`/api/weather`)"
+      rule: "Host(`api.coe558projectkfupm.com`) && PathPrefix(`/api/weather`)"
       entryPoints:
         - websecure
       service: weather-lambda
