@@ -28,7 +28,10 @@ function setButtonLoading(button, isLoading, loadingText = "Processing...") {
     if (!button) return;
 
     if (isLoading) {
-        button.dataset.originalText = button.innerHTML;
+        if (!button.dataset.originalText) {
+            button.dataset.originalText = button.innerHTML;
+        }
+
         button.disabled = true;
         button.innerHTML = `
       <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
@@ -37,6 +40,7 @@ function setButtonLoading(button, isLoading, loadingText = "Processing...") {
     } else {
         button.disabled = false;
         button.innerHTML = button.dataset.originalText || button.innerHTML;
+        delete button.dataset.originalText;
     }
 }
 
@@ -80,7 +84,7 @@ function escapeHtml(value) {
 async function fetchJson(url, options = {}) {
     const res = await fetch(url, options);
 
-    let data = null;
+    let data;
     const contentType = res.headers.get("content-type") || "";
 
     if (contentType.includes("application/json")) {
@@ -135,6 +139,7 @@ currentLocationBtn.addEventListener("click", () => {
     }
 
     setButtonLoading(currentLocationBtn, true, "Getting location...");
+    showLoader();
 
     navigator.geolocation.getCurrentPosition(
         async (pos) => {
@@ -145,19 +150,17 @@ currentLocationBtn.addEventListener("click", () => {
             document.getElementById("lonInput").value = lon;
 
             try {
-                await withLoading(
-                    () => fetchWeather(lat, lon),
-                    {
-                        button: currentLocationBtn,
-                        loadingText: "Loading weather...",
-                    }
-                );
+                await fetchWeather(lat, lon);
             } catch (err) {
                 showAlert(err.message);
+            } finally {
+                setButtonLoading(currentLocationBtn, false);
+                hideLoader();
             }
         },
         (err) => {
             setButtonLoading(currentLocationBtn, false);
+            hideLoader();
             showAlert(`Location error: ${err.message}`);
         }
     );
