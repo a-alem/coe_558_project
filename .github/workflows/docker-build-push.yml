@@ -2,11 +2,11 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
     paths:
       - "apps/frontend/**"
-      - "apps/genai-service/**"
-      - "apps/crud-service/**"
+      - "apps/genai_service/**"
+      - "apps/backend/**"
       - ".github/workflows/docker-build-push.yml"
 
 permissions:

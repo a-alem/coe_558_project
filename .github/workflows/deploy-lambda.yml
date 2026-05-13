@@ -2,9 +2,9 @@ name: Deploy Weather Lambda
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
     paths:
-      - "apps/weather-lambda/**"
+      - "apps/weather_lambda/**"
       - ".github/workflows/deploy-lambda.yml"
 
 permissions:
