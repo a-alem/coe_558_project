@@ -38,4 +38,4 @@ http:
       loadBalancer:
         passHostHeader: false
         servers:
-          - url: "https://YOUR_REAL_LAMBDA_FUNCTION_URL"
+          - url: "https://5mtgt4rjqcnuyakhf4rmphtphi0yozaf.lambda-url.eu-central-1.on.aws"
