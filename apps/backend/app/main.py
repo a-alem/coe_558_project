@@ -42,7 +42,7 @@ def serialize_doc(doc):
 def health():
     return {"status": "ok", "service": "backend"}
 
-# GENAI APIs
+# GenAI APIs
 @app.post("/results")
 def create_result(req: ResultCreate):
     doc = {
