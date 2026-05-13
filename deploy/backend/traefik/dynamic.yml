@@ -9,6 +9,7 @@ http:
         certResolver: letsencrypt
       middlewares:
         - weather-strip
+        - cors
 
   middlewares:
     weather-strip:
@@ -16,9 +17,25 @@ http:
         prefixes:
           - "/api/weather"
 
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "https://www.coe558projectkfupm.com"
+          - "https://coe558projectkfupm.com"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
   services:
     weather-lambda:
       loadBalancer:
         passHostHeader: false
         servers:
-          - url: "https://5mtgt4rjqcnuyakhf4rmphtphi0yozaf.lambda-url.eu-central-1.on.aws"
+          - url: "https://YOUR_REAL_LAMBDA_FUNCTION_URL"
