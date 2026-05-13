@@ -46,7 +46,9 @@ jobs:
           AWS_REGION=${{ vars.AWS_REGION }}
           S3_BUCKET=${{ vars.S3_BUCKET }}
           GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL=${{ vars.GEMINI_MODEL }}
+          GEMINI_IMAGE_MODEL=${{ vars.GEMINI_IMAGE_MODEL }}
+          GEMINI_MULTIMODAL_MODEL=${{ vars.GEMINI_MULTIMODAL_MODEL }}
+          GEMINI_TEXT_MODEL=${{ vars.GEMINI_TEXT_MODEL }}
           MONGO_ROOT_USERNAME=${{ vars.MONGO_ROOT_USERNAME }}
           MONGO_ROOT_PASSWORD=${{ secrets.MONGO_ROOT_PASSWORD }}
           MONGO_DB=${{ vars.MONGO_DB }}
