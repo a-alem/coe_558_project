@@ -1,0 +1,23 @@
+http:
+  routers:
+    weather:
+      rule: "Host(`api.your-domain.com`) && PathPrefix(`/api/weather`)"
+      entryPoints:
+        - websecure
+      service: weather-lambda
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - weather-strip
+
+  middlewares:
+    weather-strip:
+      stripPrefix:
+        prefixes:
+          - "/api/weather"
+
+  services:
+    weather-lambda:
+      loadBalancer:
+        servers:
+          - url: "https://5mtgt4rjqcnuyakhf4rmphtphi0yozaf.lambda-url.eu-central-1.on.aws"

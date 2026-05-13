@@ -1,0 +1,109 @@
+openapi: 3.0.3
+info:
+  title: COE558 Weather and GenAI API
+  version: 1.0.0
+servers:
+  - url: https://api.your-domain.com
+paths:
+  /api/weather:
+    get:
+      summary: Get current weather
+      parameters:
+        - in: query
+          name: lat
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: lon
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Current weather
+        "400":
+          description: Missing coordinates
+        "502":
+          description: External weather API error
+
+  /api/genai/generate:
+    post:
+      summary: Generate GenAI result from prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prompt
+              properties:
+                prompt:
+                  type: string
+                  example: "Write a short poem about cloud computing"
+      responses:
+        "200":
+          description: Generated result
+        "502":
+          description: External GenAI API error
+
+  /api/results:
+    get:
+      summary: List saved GenAI results
+      responses:
+        "200":
+          description: List of results
+
+    post:
+      summary: Save a GenAI result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prompt
+                - result_text
+              properties:
+                prompt:
+                  type: string
+                result_text:
+                  type: string
+                provider:
+                  type: string
+                media_url:
+                  type: string
+      responses:
+        "200":
+          description: Saved result
+
+  /api/results/{id}:
+    get:
+      summary: Get saved result by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Saved result
+        "404":
+          description: Result not found
+
+    delete:
+      summary: Delete saved result by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: Result not found

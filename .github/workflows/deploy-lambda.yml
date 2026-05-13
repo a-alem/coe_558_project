@@ -1,0 +1,37 @@
+name: Deploy Weather Lambda
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "apps/weather-lambda/**"
+      - ".github/workflows/deploy-lambda.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Package Lambda
+        working-directory: apps/weather-lambda
+        run: |
+          zip -r weather-lambda.zip handler.py
+
+      - name: Update Lambda code
+        working-directory: apps/weather-lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name coe558-project-weather \
+            --zip-file fileb://weather-lambda.zip

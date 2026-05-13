@@ -1,0 +1,93 @@
+services:
+  traefik:
+    image: traefik:v3.7
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - backend
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
+      - "./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro"
+      - "./traefik/acme.json:/letsencrypt/acme.json"
+
+  genai-service:
+    image: ghcr.io/a-alem/coe558-genai-service:latest
+    container_name: genai-service
+    restart: unless-stopped
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.genai.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/genai`)"
+      - "traefik.http.routers.genai.entrypoints=websecure"
+      - "traefik.http.routers.genai.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.genai-strip.stripprefix.prefixes=/api/genai"
+      - "traefik.http.routers.genai.middlewares=genai-strip"
+      - "traefik.http.services.genai.loadbalancer.server.port=8000"
+
+  crud-service:
+    image: ghcr.io/a-alem/coe558-crud-service:latest
+    container_name: crud-service
+    restart: unless-stopped
+    environment:
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017
+      MONGO_DB: ${MONGO_DB}
+      MONGO_COLLECTION: ${MONGO_COLLECTION}
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_REGION: ${AWS_REGION}
+    networks:
+      - backend
+    depends_on:
+      - mongodb
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.crud.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/results`)"
+      - "traefik.http.routers.crud.entrypoints=websecure"
+      - "traefik.http.routers.crud.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.crud-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.crud.middlewares=crud-strip"
+      - "traefik.http.services.crud.loadbalancer.server.port=8000"
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - backend
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    container_name: swagger-ui
+    restart: unless-stopped
+    environment:
+      SWAGGER_JSON: /openapi/openapi.yaml
+    volumes:
+      - "../../api/openapi.yaml:/openapi/openapi.yaml:ro"
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.swagger.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/docs`)"
+      - "traefik.http.routers.swagger.entrypoints=websecure"
+      - "traefik.http.routers.swagger.tls.certresolver=letsencrypt"
+      - "traefik.http.services.swagger.loadbalancer.server.port=8080"
+
+networks:
+  backend:
+
+volumes:
+  mongodb-data:
