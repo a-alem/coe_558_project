@@ -1,14 +1,14 @@
 {
   "info": {
-    "name": "COE558 Weather, GenAI, and Backend APIs",
-    "_postman_id": "7f5d7a1e-5b7c-4b4d-9a8b-0e5b3a7e2c20",
-    "description": "Postman collection for the COE558 Cloud and Edge Computing project APIs.\n\nServices:\n- S1 Weather Service: AWS Lambda behind Traefik/API Gateway\n- S2 GenAI Service: containerized FastAPI service\n- S3 Backend Service: containerized FastAPI service backed by MongoDB and S3\n\nBefore running:\n1. Set collection variable baseUrl to your backend gateway URL, e.g. https://api.example.com.\n2. Run 'Save GenAI Result' before requests that need resultId.\n3. Replace example values as needed.",
+    "name": "COE558 Weather, GenAI Media, and Backend APIs",
+    "_postman_id": "e8c1c5f4-f9f5-4e49-9d55-7b5f6f87d459",
+    "description": "Updated Postman collection for weather Lambda, GenAI text/image generation, uploaded media question answering, and backend CRUD operations.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://api.your-domain.com",
+      "value": "https://api.coe558projectkfupm.com",
       "type": "string"
     },
     {
@@ -30,30 +30,9 @@
   "item": [
     {
       "name": "S1 - Weather Service",
-      "description": "Weather API implemented as AWS Lambda and exposed through the backend gateway.",
       "item": [
         {
-          "name": "Get Current Weather by Coordinates",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Response has temperature and condition', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('temperature_c');",
-                  "    pm.expect(json).to.have.property('temperature_f');",
-                  "    pm.expect(json).to.have.property('condition_label');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Get Current Weather",
           "request": {
             "method": "GET",
             "header": [
@@ -74,50 +53,30 @@
               "query": [
                 {
                   "key": "lat",
-                  "value": "{{lat}}",
-                  "description": "Latitude"
+                  "value": "{{lat}}"
                 },
                 {
                   "key": "lon",
-                  "value": "{{lon}}",
-                  "description": "Longitude"
+                  "value": "{{lon}}"
                 }
               ]
-            },
-            "description": "Fetches the current weather for the selected latitude and longitude."
+            }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has weather fields', function () { const j = pm.response.json(); pm.expect(j).to.have.property('temperature_c'); pm.expect(j).to.have.property('temperature_f'); pm.expect(j).to.have.property('condition_label'); });"
+                ]
+              }
+            }
+          ],
           "response": [
             {
-              "name": "200 - Weather for Riyadh",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/weather?lat=24.7136&lon=46.6753",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "weather"
-                  ],
-                  "query": [
-                    {
-                      "key": "lat",
-                      "value": "24.7136"
-                    },
-                    {
-                      "key": "lon",
-                      "value": "46.6753"
-                    }
-                  ]
-                }
-              },
+              "name": "200 - Weather",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -127,39 +86,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"latitude\": 24.7136,\n  \"longitude\": 46.6753,\n  \"temperature_c\": 33.4,\n  \"temperature_f\": 92.12,\n  \"condition_code\": 0,\n  \"condition_label\": \"Clear sky\"\n}"
-            },
-            {
-              "name": "400 - Missing Coordinates",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/weather",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "weather"
-                  ]
-                }
-              },
-              "status": "Bad Request",
-              "code": 400,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"error\": \"lat and lon query parameters are required\"\n}"
+              "body": "{\n  \"latitude\": 24.7136,\n  \"longitude\": 46.6753,\n  \"temperature_c\": 34.1,\n  \"temperature_f\": 93.38,\n  \"condition_code\": 0,\n  \"condition_label\": \"Clear sky\"\n}"
             }
           ]
         }
@@ -167,28 +94,9 @@
     },
     {
       "name": "S2 - GenAI Service",
-      "description": "Containerized GenAI service that calls an external GenAI provider such as Gemini.",
       "item": [
         {
           "name": "Health Check - GenAI",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Service is genai', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.service).to.eql('genai');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
           "request": {
             "method": "GET",
             "header": [
@@ -207,32 +115,23 @@
                 "genai",
                 "health"
               ]
-            },
-            "description": "Checks whether the GenAI service is running."
+            }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Service is genai', function () { pm.expect(pm.response.json().service).to.eql('genai'); });"
+                ]
+              }
+            }
+          ],
           "response": [
             {
-              "name": "200 - GenAI Healthy",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/genai/health",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "genai",
-                    "health"
-                  ]
-                }
-              },
+              "name": "200 - Healthy",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -247,26 +146,7 @@
           ]
         },
         {
-          "name": "Generate GenAI Result",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Response contains result_text', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('result_text');",
-                  "    pm.expect(json.result_text).to.be.a('string');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Generate Text",
           "request": {
             "method": "POST",
             "header": [
@@ -281,7 +161,70 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prompt\": \"Write a short friendly paragraph explaining cloud computing to a beginner.\"\n}",
+              "raw": "{\n  \"prompt\": \"Explain cloud computing in one short paragraph.\",\n  \"output_type\": \"text\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/genai/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "genai",
+                "generate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has text result', function () { const j = pm.response.json(); pm.expect(j.output_type).to.eql('text'); pm.expect(j.result_text).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 - Text Generated",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"prompt\": \"Explain cloud computing in one short paragraph.\",\n  \"result_text\": \"Cloud computing is the delivery of computing resources over the internet.\",\n  \"provider\": \"gemini\",\n  \"output_type\": \"text\",\n  \"media_base64\": null,\n  \"media_mime_type\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Generate image of a cute duck floating on a pond.\",\n  \"output_type\": \"image\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -299,39 +242,23 @@
                 "generate"
               ]
             },
-            "description": "Sends a prompt to the GenAI service and returns the generated output."
+            "description": "Generates an image. Response should include media_base64 and media_mime_type."
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has generated image fields', function () { const j = pm.response.json(); pm.expect(j.output_type).to.eql('image'); pm.expect(j).to.have.property('media_base64'); pm.expect(j).to.have.property('media_mime_type'); });"
+                ]
+              }
+            }
+          ],
           "response": [
             {
-              "name": "200 - Generated Result",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"prompt\": \"Write a short friendly paragraph explaining cloud computing to a beginner.\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/genai/generate",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "genai",
-                    "generate"
-                  ]
-                }
-              },
+              "name": "200 - Image Generated",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -341,40 +268,66 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"prompt\": \"Write a short friendly paragraph explaining cloud computing to a beginner.\",\n  \"result_text\": \"Cloud computing means using computing resources such as servers, storage, and applications over the internet instead of running everything on your own computer. It helps users and companies scale easily, pay for what they use, and access services from anywhere.\",\n  \"provider\": \"gemini\"\n}"
-            },
-            {
-              "name": "502 - External GenAI API Error",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"prompt\": \"Generate something\"\n}"
+              "body": "{\n  \"prompt\": \"Generate image of a cute duck floating on a pond.\",\n  \"result_text\": \"Generated image.\",\n  \"provider\": \"gemini\",\n  \"output_type\": \"image\",\n  \"media_base64\": \"iVBORw0KGgoAAA...\",\n  \"media_mime_type\": \"image/png\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Ask Question About Uploaded Media",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "prompt",
+                  "value": "What is in this image?",
+                  "type": "text"
                 },
-                "url": {
-                  "raw": "{{baseUrl}}/api/genai/generate",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "genai",
-                    "generate"
-                  ]
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
                 }
-              },
-              "status": "Bad Gateway",
-              "code": 502,
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/genai/media/question",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "genai",
+                "media",
+                "question"
+              ]
+            },
+            "description": "Upload an image/audio/video and ask a question about it. Choose a file before sending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has media answer', function () { const j = pm.response.json(); pm.expect(j).to.have.property('result_text'); pm.expect(j).to.have.property('filename'); pm.expect(j).to.have.property('mime_type'); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 - Media Answered",
+              "status": "OK",
+              "code": 200,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -382,36 +335,17 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"detail\": \"Gemini API error: provider request failed\"\n}"
+              "body": "{\n  \"prompt\": \"What is in this image?\",\n  \"filename\": \"duck.png\",\n  \"mime_type\": \"image/png\",\n  \"result_text\": \"The image shows a duck.\",\n  \"provider\": \"gemini\"\n}"
             }
           ]
         }
       ]
     },
     {
-      "name": "S3 - Backend Service",
-      "description": "Containerized backend service that stores GenAI prompts/results in MongoDB and optional media references in S3.",
+      "name": "S3 - Backend CRUD Service",
       "item": [
         {
           "name": "Health Check - Backend",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Service is backend', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.service).to.eql('backend');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
           "request": {
             "method": "GET",
             "header": [
@@ -421,41 +355,31 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/results/health",
+              "raw": "{{baseUrl}}/api/backend/health",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "results",
+                "backend",
                 "health"
               ]
-            },
-            "description": "Checks whether the Backend service is running."
+            }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
           "response": [
             {
-              "name": "200 - Backend Healthy",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/results/health",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "results",
-                    "health"
-                  ]
-                }
-              },
+              "name": "200 - Healthy",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -465,31 +389,12 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"status\": \"ok\",\n  \"service\": \"backend\"\n}"
+              "body": "{\n  \"status\": \"ok\",\n  \"service\": \"crud\"\n}"
             }
           ]
         },
         {
-          "name": "Save GenAI Result",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Saved result has id', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('id');",
-                  "    pm.collectionVariables.set('resultId', json.id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Save Result",
           "request": {
             "method": "POST",
             "header": [
@@ -504,7 +409,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prompt\": \"Write a short friendly paragraph explaining cloud computing to a beginner.\",\n  \"result_text\": \"Cloud computing means using computing resources over the internet instead of running everything locally.\",\n  \"provider\": \"gemini\",\n  \"media_url\": null\n}",
+              "raw": "{\n  \"prompt\": \"Generate image of a duck\",\n  \"result_text\": \"Generated image.\",\n  \"provider\": \"gemini\",\n  \"media_url\": \"data:image/png;base64,iVBORw0KGgoAAA...\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -520,39 +425,23 @@
                 "api",
                 "results"
               ]
-            },
-            "description": "Saves a GenAI prompt and result in MongoDB. If media is used, media_url can reference an S3 object."
+            }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Stores id as collection variable', function () { const j = pm.response.json(); pm.expect(j).to.have.property('id'); pm.collectionVariables.set('resultId', j.id); });"
+                ]
+              }
+            }
+          ],
           "response": [
             {
-              "name": "200 - Saved Result",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"prompt\": \"Write a short friendly paragraph explaining cloud computing to a beginner.\",\n  \"result_text\": \"Cloud computing means using computing resources over the internet instead of running everything locally.\",\n  \"provider\": \"gemini\",\n  \"media_url\": null\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/results",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "results"
-                  ]
-                }
-              },
+              "name": "200 - Saved",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -562,30 +451,12 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"prompt\": \"Write a short friendly paragraph explaining cloud computing to a beginner.\",\n  \"result_text\": \"Cloud computing means using computing resources over the internet instead of running everything locally.\",\n  \"provider\": \"gemini\",\n  \"media_url\": null,\n  \"created_at\": \"2026-05-13T10:00:00.000000+00:00\",\n  \"id\": \"6644f6b9e138237b7f5e9a01\"\n}"
+              "body": "{\n  \"prompt\": \"Generate image of a duck\",\n  \"result_text\": \"Generated image.\",\n  \"provider\": \"gemini\",\n  \"media_url\": \"data:image/png;base64,iVBORw0KGgoAAA...\",\n  \"created_at\": \"2026-05-13T17:01:24.982228+00:00\",\n  \"id\": \"6a04ae64e5ff542511e2bd0b\"\n}"
             }
           ]
         },
         {
-          "name": "List Saved Results",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Response is an array', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.be.an('array');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "List Results",
           "request": {
             "method": "GET",
             "header": [
@@ -603,31 +474,23 @@
                 "api",
                 "results"
               ]
-            },
-            "description": "Lists all saved GenAI results."
+            }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response is array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
           "response": [
             {
-              "name": "200 - Saved Results List",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/results",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "results"
-                  ]
-                }
-              },
+              "name": "200 - List",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -637,30 +500,12 @@
                   "value": "application/json"
                 }
               ],
-              "body": "[\n  {\n    \"prompt\": \"Write a short friendly paragraph explaining cloud computing to a beginner.\",\n    \"result_text\": \"Cloud computing means using computing resources over the internet instead of running everything locally.\",\n    \"provider\": \"gemini\",\n    \"media_url\": null,\n    \"created_at\": \"2026-05-13T10:00:00.000000+00:00\",\n    \"id\": \"6644f6b9e138237b7f5e9a01\"\n  }\n]"
+              "body": "[\n  {\n    \"prompt\": \"Generate image of a duck\",\n    \"result_text\": \"Generated image.\",\n    \"provider\": \"gemini\",\n    \"media_url\": \"data:image/png;base64,iVBORw0KGgoAAA...\",\n    \"created_at\": \"2026-05-13T17:01:24.982228+00:00\",\n    \"id\": \"6a04ae64e5ff542511e2bd0b\"\n  }\n]"
             }
           ]
         },
         {
-          "name": "Get Saved Result by ID",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Response id matches collection variable', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.id).to.eql(pm.collectionVariables.get('resultId'));",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Get Result by ID",
           "request": {
             "method": "GET",
             "header": [
@@ -679,98 +524,22 @@
                 "results",
                 "{{resultId}}"
               ]
-            },
-            "description": "Gets one saved GenAI result by MongoDB ObjectId."
+            }
           },
-          "response": [
+          "event": [
             {
-              "name": "200 - Single Saved Result",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/results/6644f6b9e138237b7f5e9a01",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "results",
-                    "6644f6b9e138237b7f5e9a01"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"prompt\": \"Write a short friendly paragraph explaining cloud computing to a beginner.\",\n  \"result_text\": \"Cloud computing means using computing resources over the internet instead of running everything locally.\",\n  \"provider\": \"gemini\",\n  \"media_url\": null,\n  \"created_at\": \"2026-05-13T10:00:00.000000+00:00\",\n  \"id\": \"6644f6b9e138237b7f5e9a01\"\n}"
-            },
-            {
-              "name": "404 - Result Not Found",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/results/6644f6b9e138237b7f5e9a99",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "results",
-                    "6644f6b9e138237b7f5e9a99"
-                  ]
-                }
-              },
-              "status": "Not Found",
-              "code": 404,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"detail\": \"Result not found\"\n}"
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
             }
           ]
         },
         {
           "name": "Upload Media and Save Result",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Uploaded result has media_url', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('media_url');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
           "request": {
             "method": "POST",
             "header": [
@@ -784,12 +553,12 @@
               "formdata": [
                 {
                   "key": "prompt",
-                  "value": "Describe the uploaded image",
+                  "value": "Describe uploaded image",
                   "type": "text"
                 },
                 {
                   "key": "result_text",
-                  "value": "The image contains a sample object.",
+                  "value": "The uploaded image contains a duck.",
                   "type": "text"
                 },
                 {
@@ -815,56 +584,11 @@
                 "upload"
               ]
             },
-            "description": "Uploads a media file to S3 and saves the prompt/result metadata in MongoDB. Select a local file in Postman before sending."
+            "description": "Uploads media to object storage and saves metadata. Select a file before sending."
           },
           "response": [
             {
-              "name": "200 - Uploaded and Saved Result",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "prompt",
-                      "value": "Describe the uploaded image",
-                      "type": "text"
-                    },
-                    {
-                      "key": "result_text",
-                      "value": "The image contains a sample object.",
-                      "type": "text"
-                    },
-                    {
-                      "key": "provider",
-                      "value": "gemini",
-                      "type": "text"
-                    },
-                    {
-                      "key": "file",
-                      "type": "file",
-                      "src": []
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/results/upload",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "results",
-                    "upload"
-                  ]
-                }
-              },
+              "name": "200 - Uploaded and Saved",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -874,30 +598,12 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"prompt\": \"Describe the uploaded image\",\n  \"result_text\": \"The image contains a sample object.\",\n  \"provider\": \"gemini\",\n  \"media_url\": \"s3://coe558-genai-results-example/uploads/1715594400-sample.png\",\n  \"created_at\": \"2026-05-13T10:00:00.000000+00:00\",\n  \"id\": \"6644f6b9e138237b7f5e9a02\"\n}"
+              "body": "{\n  \"prompt\": \"Describe uploaded image\",\n  \"result_text\": \"The uploaded image contains a duck.\",\n  \"provider\": \"gemini\",\n  \"media_url\": \"s3://coe558-genai-results/uploads/example-duck.png\",\n  \"created_at\": \"2026-05-13T17:01:24.982228+00:00\",\n  \"id\": \"6a04ae64e5ff542511e2bd0c\"\n}"
             }
           ]
         },
         {
-          "name": "Delete Saved Result by ID",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Delete response is true', function () {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json.deleted).to.eql(true);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Delete Result by ID",
           "request": {
             "method": "DELETE",
             "header": [
@@ -916,32 +622,23 @@
                 "results",
                 "{{resultId}}"
               ]
-            },
-            "description": "Deletes one saved GenAI result by MongoDB ObjectId."
+            }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Deleted is true', function () { pm.expect(pm.response.json().deleted).to.eql(true); });"
+                ]
+              }
+            }
+          ],
           "response": [
             {
-              "name": "200 - Deleted Result",
-              "originalRequest": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/results/6644f6b9e138237b7f5e9a01",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "results",
-                    "6644f6b9e138237b7f5e9a01"
-                  ]
-                }
-              },
+              "name": "200 - Deleted",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -951,7 +648,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"deleted\": true,\n  \"id\": \"6644f6b9e138237b7f5e9a01\"\n}"
+              "body": "{\n  \"deleted\": true,\n  \"id\": \"6a04ae64e5ff542511e2bd0b\"\n}"
             }
           ]
         }

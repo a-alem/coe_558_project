@@ -49,14 +49,14 @@
                     Weather Insights and GenAI Results
                 </h1>
                 <p class="hero-text">
-                    A lightweight Bootstrap frontend connected to Traefik API Gateway and Reverse Proxy that handles TLS termination, CI/CD fully developed and containers are deployed automatically to the EC2 instances.
+                    A lightweight Bootstrap frontend connected to Traefik API Gateway and Reverse Proxy that handles TLS termination, CI/CD fully developed and containers are deployed automatically to the EC2 instances, all of this is declared and maintained by Terraform to comply with IaC principles.
                 </p>
             </div>
+
             <div class="col-lg-4">
                 <div class="hero-card">
                     <div class="hero-card-number">COE558</div>
                     <div class="hero-card-label">Course Project</div>
-                    <div class="hero-card-label"><a href="https://github.com/a-alem/coe_558_project">GitHub Repository</a></div>
                 </div>
             </div>
         </div>
@@ -117,7 +117,7 @@
                     id="promptInput"
                     class="form-control app-input mb-3"
                     rows="4"
-                    placeholder="Example: Write a short paragraph explaining cloud computing..."
+                    placeholder="Example: Generate image of a cute duck floating on a pond..."
             ></textarea>
 
             <div class="d-flex flex-wrap gap-2">
@@ -132,7 +132,7 @@
 
             <div id="genaiResultWrapper" class="result-panel d-none mt-4">
                 <div class="result-panel-header">Generated Result</div>
-                <pre id="genaiResult"></pre>
+                <div id="genaiResult" class="generated-output"></div>
             </div>
         </div>
     </section>

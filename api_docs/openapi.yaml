@@ -1,12 +1,22 @@
 openapi: 3.0.3
 info:
-  title: COE558 Weather and GenAI API
-  version: 1.0.0
+  title: COE558 Weather, GenAI, and Backend API
+  version: 1.2.0
+  description: OpenAPI specification for the COE558 project APIs exposed through Traefik.
 servers:
-  - url: https://api.your-domain.com
+  - url: https://api.coe558projectkfupm.com
+    description: Production API Gateway
+tags:
+  - name: Weather
+    description: S1 serverless weather API implemented with AWS Lambda
+  - name: GenAI
+    description: S2 GenAI service for text generation, image generation, and uploaded media analysis
+  - name: Backend
+    description: S3 backend CRUD service for storing prompts and results
 paths:
   /api/weather:
     get:
+      tags: [Weather]
       summary: Get current weather
       parameters:
         - in: query
@@ -14,96 +24,381 @@ paths:
           required: true
           schema:
             type: number
+            format: float
+          example: 24.7136
         - in: query
           name: lon
           required: true
           schema:
             type: number
+            format: float
+          example: 46.6753
       responses:
         "200":
-          description: Current weather
+          description: Current weather data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeatherResponse"
+              example:
+                latitude: 24.7136
+                longitude: 46.6753
+                temperature_c: 34.1
+                temperature_f: 93.38
+                condition_code: 0
+                condition_label: Clear sky
         "400":
-          description: Missing coordinates
+          description: Missing or invalid coordinates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "502":
-          description: External weather API error
-
+          description: External weather API or Lambda proxy error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/genai/health:
+    get:
+      tags: [GenAI]
+      summary: GenAI health check
+      responses:
+        "200":
+          description: GenAI service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                service: genai
   /api/genai/generate:
     post:
-      summary: Generate GenAI result from prompt
+      tags: [GenAI]
+      summary: Generate text or image
+      description: Generates text or image output from a prompt using Gemini.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - prompt
-              properties:
-                prompt:
-                  type: string
-                  example: "Write a short poem about cloud computing"
+              $ref: "#/components/schemas/GenerateRequest"
+            examples:
+              text:
+                summary: Text generation
+                value:
+                  prompt: Explain cloud computing in one paragraph.
+                  output_type: text
+              image:
+                summary: Image generation
+                value:
+                  prompt: Generate image of a cute duck floating on a pond.
+                  output_type: image
       responses:
         "200":
-          description: Generated result
+          description: Generated text or image result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateResponse"
+              examples:
+                text:
+                  summary: Text result
+                  value:
+                    prompt: Explain cloud computing in one paragraph.
+                    result_text: Cloud computing is the delivery of computing resources over the internet.
+                    provider: gemini
+                    output_type: text
+                    media_base64: null
+                    media_mime_type: null
+                image:
+                  summary: Image result
+                  value:
+                    prompt: Generate image of a cute duck floating on a pond.
+                    result_text: Generated image.
+                    provider: gemini
+                    output_type: image
+                    media_base64: iVBORw0KGgoAAA...
+                    media_mime_type: image/png
+        "422":
+          description: Validation error
         "502":
           description: External GenAI API error
-
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/genai/media/question:
+    post:
+      tags: [GenAI]
+      summary: Ask a question about uploaded media
+      description: Upload an image, audio, or video file and ask Gemini a question about it.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/MediaQuestionRequest"
+      responses:
+        "200":
+          description: Answer about uploaded media
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaQuestionResponse"
+              example:
+                prompt: What is in this image?
+                filename: duck.png
+                mime_type: image/png
+                result_text: The image shows a duck floating on water.
+                provider: gemini
+        "400":
+          description: Unsupported file type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: External GenAI API error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/backend/health:
+    get:
+      tags: [Backend]
+      summary: Backend health check
+      responses:
+        "200":
+          description: Backend service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                service: crud
   /api/results:
     get:
+      tags: [Backend]
       summary: List saved GenAI results
       responses:
         "200":
-          description: List of results
-
+          description: List of saved results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedResult"
     post:
-      summary: Save a GenAI result
+      tags: [Backend]
+      summary: Save a GenAI prompt/result
+      description: Saves prompt/result metadata in MongoDB. Current frontend may save generated images as data URLs in media_url.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - prompt
-                - result_text
-              properties:
-                prompt:
-                  type: string
-                result_text:
-                  type: string
-                provider:
-                  type: string
-                media_url:
-                  type: string
+              $ref: "#/components/schemas/SaveResultRequest"
       responses:
         "200":
           description: Saved result
-
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedResult"
+  /api/results/upload:
+    post:
+      tags: [Backend]
+      summary: Upload media and save result metadata
+      description: Uploads media to object storage and stores prompt/result metadata in MongoDB.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UploadResultRequest"
+      responses:
+        "200":
+          description: Uploaded and saved result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedResult"
   /api/results/{id}:
     get:
-      summary: Get saved result by id
+      tags: [Backend]
+      summary: Get saved result by ID
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          example: 6a04ae64e5ff542511e2bd0b
       responses:
         "200":
           description: Saved result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedResult"
+        "400":
+          description: Invalid result ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Result not found
-
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
-      summary: Delete saved result by id
+      tags: [Backend]
+      summary: Delete saved result by ID
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          example: 6a04ae64e5ff542511e2bd0b
       responses:
         "200":
-          description: Deleted
+          description: Deleted result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+              example:
+                deleted: true
+                id: 6a04ae64e5ff542511e2bd0b
         "404":
           description: Result not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    WeatherResponse:
+      type: object
+      properties:
+        latitude: { type: number }
+        longitude: { type: number }
+        temperature_c: { type: number }
+        temperature_f: { type: number }
+        condition_code: { type: integer }
+        condition_label: { type: string }
+    HealthResponse:
+      type: object
+      properties:
+        status: { type: string }
+        service: { type: string }
+    GenerateRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 3
+          maxLength: 4000
+        output_type:
+          type: string
+          nullable: true
+          enum: [text, image]
+    GenerateResponse:
+      type: object
+      properties:
+        prompt: { type: string }
+        result_text: { type: string }
+        provider: { type: string }
+        output_type:
+          type: string
+          enum: [text, image]
+        media_base64:
+          type: string
+          nullable: true
+        media_mime_type:
+          type: string
+          nullable: true
+          example: image/png
+    MediaQuestionRequest:
+      type: object
+      required: [prompt, file]
+      properties:
+        prompt:
+          type: string
+          example: What is in this image?
+        file:
+          type: string
+          format: binary
+    MediaQuestionResponse:
+      type: object
+      properties:
+        prompt: { type: string }
+        filename: { type: string }
+        mime_type: { type: string }
+        result_text: { type: string }
+        provider: { type: string }
+    SaveResultRequest:
+      type: object
+      required: [prompt, result_text]
+      properties:
+        prompt: { type: string }
+        result_text: { type: string }
+        provider:
+          type: string
+          default: gemini
+        media_url:
+          type: string
+          nullable: true
+    UploadResultRequest:
+      type: object
+      required: [prompt, result_text, file]
+      properties:
+        prompt: { type: string }
+        result_text: { type: string }
+        provider:
+          type: string
+          default: gemini
+        file:
+          type: string
+          format: binary
+    SavedResult:
+      type: object
+      properties:
+        id: { type: string }
+        prompt: { type: string }
+        result_text: { type: string }
+        provider: { type: string }
+        media_url:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    DeleteResponse:
+      type: object
+      properties:
+        deleted: { type: boolean }
+        id: { type: string }
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: object
+        error:
+          type: string

@@ -22,7 +22,9 @@ services:
     restart: unless-stopped
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      GEMINI_MODEL: ${GEMINI_MODEL}
+      GEMINI_TEXT_MODEL: ${GEMINI_TEXT_MODEL}
+      GEMINI_IMAGE_MODEL: ${GEMINI_IMAGE_MODEL}
+      GEMINI_MULTIMODAL_MODEL: ${GEMINI_MULTIMODAL_MODEL}
     networks:
       - backend
     labels:

@@ -2,6 +2,8 @@ const API_BASE_URL = "https://api.coe558projectkfupm.com";
 
 let lastPrompt = "";
 let lastResult = "";
+let lastMediaBase64 = null;
+let lastMediaMimeType = null;
 
 const globalLoader = document.getElementById("globalLoader");
 const alertBox = document.getElementById("alertBox");
@@ -84,7 +86,7 @@ function escapeHtml(value) {
 async function fetchJson(url, options = {}) {
     const res = await fetch(url, options);
 
-    let data;
+    let data = null;
     const contentType = res.headers.get("content-type") || "";
 
     if (contentType.includes("application/json")) {
@@ -103,6 +105,25 @@ async function fetchJson(url, options = {}) {
     }
 
     return data;
+}
+
+function shouldRequestImage(prompt) {
+    const imageKeywords = [
+        "generate image",
+        "create image",
+        "draw",
+        "photo of",
+        "picture of",
+        "image of",
+        "illustration of",
+        "logo",
+        "icon",
+        "poster",
+    ];
+
+    const promptLower = prompt.toLowerCase();
+
+    return imageKeywords.some((keyword) => promptLower.includes(keyword));
 }
 
 function showWeather(data) {
@@ -196,6 +217,8 @@ generateBtn.addEventListener("click", async () => {
         return;
     }
 
+    const outputType = shouldRequestImage(prompt) ? "image" : "text";
+
     try {
         const data = await withLoading(
             () =>
@@ -204,19 +227,40 @@ generateBtn.addEventListener("click", async () => {
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ prompt }),
+                    body: JSON.stringify({
+                        prompt,
+                        output_type: outputType,
+                    }),
                 }),
             {
                 button: generateBtn,
-                loadingText: "Generating...",
+                loadingText: outputType === "image" ? "Generating image..." : "Generating...",
             }
         );
 
         lastPrompt = prompt;
-        lastResult = data.result_text;
+        lastResult = data.result_text || "";
+        lastMediaBase64 = data.media_base64 || null;
+        lastMediaMimeType = data.media_mime_type || null;
 
         genaiResultWrapper.classList.remove("d-none");
-        genaiResult.textContent = data.result_text;
+
+        if (data.media_base64 && data.media_mime_type) {
+            genaiResult.innerHTML = `
+        <div class="mb-3">
+          ${escapeHtml(data.result_text || "Generated image")}
+        </div>
+
+        <img
+          src="data:${escapeHtml(data.media_mime_type)};base64,${data.media_base64}"
+          alt="Generated image"
+          class="generated-image"
+        >
+      `;
+        } else {
+            genaiResult.textContent = data.result_text;
+        }
+
         saveBtn.disabled = false;
     } catch (err) {
         showAlert(err.message);
@@ -241,6 +285,9 @@ saveBtn.addEventListener("click", async () => {
                         prompt: lastPrompt,
                         result_text: lastResult,
                         provider: "gemini",
+                        media_url: lastMediaBase64 && lastMediaMimeType
+                            ? `data:${lastMediaMimeType};base64,${lastMediaBase64}`
+                            : null,
                     }),
                 }),
             {
@@ -274,6 +321,32 @@ async function deleteResult(id, button) {
     } catch (err) {
         showAlert(err.message);
     }
+}
+
+function renderSavedMedia(item) {
+    if (!item.media_url) {
+        return "";
+    }
+
+    if (item.media_url.startsWith("data:image/")) {
+        return `
+      <div class="saved-media mt-3">
+        <img
+          src="${item.media_url}"
+          alt="Saved generated media"
+          class="saved-generated-image"
+        >
+      </div>
+    `;
+    }
+
+    return `
+    <div class="saved-media mt-3">
+      <a href="${escapeHtml(item.media_url)}" target="_blank" rel="noopener noreferrer">
+        View saved media
+      </a>
+    </div>
+  `;
 }
 
 async function loadResults() {
@@ -322,7 +395,9 @@ async function loadResults() {
         <h3>Result</h3>
         <p>${escapeHtml(item.result_text)}</p>
 
-        <div class="saved-result-meta">
+        ${renderSavedMedia(item)}
+
+        <div class="saved-result-meta mt-3">
           Provider: ${escapeHtml(item.provider)} • Created at: ${escapeHtml(item.created_at)}
         </div>
       `;

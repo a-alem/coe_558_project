@@ -215,12 +215,23 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.result-panel pre {
+.generated-output {
     margin: 0;
     padding: 1rem;
     color: #ecfff7;
     white-space: pre-wrap;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.generated-image {
+    display: block;
+    width: 100%;
+    max-width: 520px;
+    max-height: 520px;
+    object-fit: contain;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
 }
 
 .saved-results-grid {
@@ -249,6 +260,17 @@ body {
 .saved-result-meta {
     font-size: 0.82rem;
     color: #85928d;
+}
+
+.saved-generated-image {
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    max-height: 360px;
+    object-fit: contain;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 107, 63, 0.12);
+    background: #f8fbf9;
 }
 
 .empty-state {

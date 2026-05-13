@@ -1,128 +1,168 @@
 import os
-from datetime import datetime, timezone
-from typing import Optional
-
-import boto3
-from bson import ObjectId
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+import requests
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from pymongo import MongoClient
+from typing import Optional
 
 
 app = FastAPI(
-    title="S3 Backend Service",
+    title="S2 GenAI Service",
     version="1.0.0",
 )
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://root:password@mongodb:27017")
-MONGO_DB = os.getenv("MONGO_DB", "coe558")
-MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "genai_results")
-S3_BUCKET = os.getenv("S3_BUCKET")
 
-client = MongoClient(MONGO_URI)
-collection = client[MONGO_DB][MONGO_COLLECTION]
-
-s3 = boto3.client("s3")
-
-
-class ResultCreate(BaseModel):
-    prompt: str = Field(..., min_length=3)
-    result_text: str = Field(..., min_length=1)
-    provider: str = "gemini"
-    media_url: Optional[str] = None
-
-
-def serialize_doc(doc):
-    doc["id"] = str(doc["_id"])
-    del doc["_id"]
-    return doc
-
-# Health check API
-@app.get("/health")
-def health():
-    return {"status": "ok", "service": "backend"}
-
-# Saved GenAI results APIs
-@app.post("/results")
-def create_result(req: ResultCreate):
-    doc = {
-        "prompt": req.prompt,
-        "result_text": req.result_text,
-        "provider": req.provider,
-        "media_url": req.media_url,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-    inserted = collection.insert_one(doc)
-    doc["_id"] = inserted.inserted_id
-
-    return serialize_doc(doc)
-
-
-@app.post("/results/upload")
-async def create_result_with_file(
-        prompt: str = Form(...),
-        result_text: str = Form(...),
-        provider: str = Form("gemini"),
-        file: UploadFile = File(...),
-):
-    if not S3_BUCKET:
-        raise HTTPException(status_code=500, detail="S3_BUCKET is not configured")
-
-    object_key = f"uploads/{datetime.now(timezone.utc).timestamp()}-{file.filename}"
-
-    content = await file.read()
-
-    s3.put_object(
-        Bucket=S3_BUCKET,
-        Key=object_key,
-        Body=content,
-        ContentType=file.content_type or "application/octet-stream",
+class GenerateRequest(BaseModel):
+    prompt: str = Field(..., min_length=3, max_length=2000)
+    output_type: Optional[str] = Field(
+        default=None,
+        description="Use 'text' or 'image'. If omitted, image-like prompts are detected automatically.",
     )
 
-    media_url = f"s3://{S3_BUCKET}/{object_key}"
 
-    doc = {
-        "prompt": prompt,
-        "result_text": result_text,
-        "provider": provider,
-        "media_url": media_url,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+class GenerateResponse(BaseModel):
+    prompt: str
+    result_text: str
+    provider: str = "gemini"
+    output_type: str
+    media_base64: Optional[str] = None
+    media_mime_type: Optional[str] = None
+
+
+def should_generate_image(prompt: str, output_type: Optional[str]) -> bool:
+    if output_type:
+        return output_type.lower() == "image"
+
+    image_keywords = [
+        "generate image",
+        "create image",
+        "draw",
+        "photo of",
+        "picture of",
+        "image of",
+        "illustration of",
+        "logo",
+        "icon",
+        "poster",
+    ]
+
+    prompt_lower = prompt.lower()
+    return any(keyword in prompt_lower for keyword in image_keywords)
+
+
+def extract_parts(data: dict):
+    try:
+        return data["candidates"][0]["content"]["parts"]
+    except (KeyError, IndexError, TypeError):
+        raise HTTPException(
+            status_code=502,
+            detail=f"Unexpected Gemini response format: {data}",
+        )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "genai"}
+
+
+@app.post("/generate", response_model=GenerateResponse)
+def generate(req: GenerateRequest):
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured")
+
+    image_mode = should_generate_image(req.prompt, req.output_type)
+
+    if image_mode:
+        model = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+        generation_config = {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "responseFormat": {
+                "image": {
+                    "aspectRatio": "1:1"
+                }
+            }
+        }
+    else:
+        model = os.getenv("GEMINI_TEXT_MODEL", os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite"))
+        generation_config = None
+
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": api_key,
     }
 
-    inserted = collection.insert_one(doc)
-    doc["_id"] = inserted.inserted_id
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": req.prompt}
+                ]
+            }
+        ]
+    }
 
-    return serialize_doc(doc)
+    if generation_config:
+        payload["generationConfig"] = generation_config
 
+    try:
+        res = requests.post(url, headers=headers, json=payload, timeout=90)
+        res.raise_for_status()
+        data = res.json()
 
-@app.get("/results")
-def list_results():
-    docs = collection.find().sort("created_at", -1)
-    return [serialize_doc(doc) for doc in docs]
+        parts = extract_parts(data)
 
+        text_parts = []
+        media_base64 = None
+        media_mime_type = None
 
-@app.get("/results/{result_id}")
-def get_result(result_id: str):
-    if not ObjectId.is_valid(result_id):
-        raise HTTPException(status_code=400, detail="Invalid result id")
+        for part in parts:
+            if "text" in part:
+                text_parts.append(part["text"])
 
-    doc = collection.find_one({"_id": ObjectId(result_id)})
+            inline_data = part.get("inlineData") or part.get("inline_data")
+            if inline_data:
+                media_base64 = inline_data.get("data")
+                media_mime_type = inline_data.get("mimeType") or inline_data.get("mime_type")
 
-    if not doc:
-        raise HTTPException(status_code=404, detail="Result not found")
+        result_text = "\n".join(text_parts).strip()
 
-    return serialize_doc(doc)
+        if image_mode and not media_base64:
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": "Gemini returned no image data.",
+                    "hint": "Check that GEMINI_IMAGE_MODEL supports image generation and that your API key has access/quota.",
+                    "raw_response": data,
+                },
+            )
 
+        return GenerateResponse(
+            prompt=req.prompt,
+            result_text=result_text or "Generated successfully.",
+            output_type="image" if image_mode else "text",
+            media_base64=media_base64,
+            media_mime_type=media_mime_type,
+        )
 
-@app.delete("/results/{result_id}")
-def delete_result(result_id: str):
-    if not ObjectId.is_valid(result_id):
-        raise HTTPException(status_code=400, detail="Invalid result id")
-
-    result = collection.delete_one({"_id": ObjectId(result_id)})
-
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Result not found")
-
-    return {"deleted": True, "id": result_id}
+    except requests.HTTPError as e:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "Gemini API error",
+                "status_code": e.response.status_code,
+                "body": e.response.text,
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to generate response: {str(e)}",
+        )
