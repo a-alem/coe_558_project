@@ -5,6 +5,10 @@ on:
     workflows: ["Build and Push Docker Images"]
     types:
       - completed
+  push:
+    branches: [ "master" ]
+    paths:
+      - ".github/workflows/deploy-backend.yml"
 
 jobs:
   deploy:
@@ -25,7 +29,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/backend_key ubuntu@${{ vars.BACKEND_HOST }} "mkdir -p ~/coe558/deploy/backend"
           scp -i ~/.ssh/backend_key -r deploy/backend/* ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/deploy/backend/
-          scp -i ~/.ssh/backend_key api/openapi.yaml ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/api-openapi.yaml
+          scp -i ~/.ssh/backend_key api_docs/openapi.yaml ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/api-openapi.yaml
 
       - name: Deploy backend
         run: |

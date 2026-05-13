@@ -5,6 +5,10 @@ on:
     workflows: ["Build and Push Docker Images"]
     types:
       - completed
+  push:
+    branches: [ "master" ]
+    paths:
+      - ".github/workflows/deploy-frontend.yml"
 
 jobs:
   deploy:
