@@ -33,5 +33,5 @@ jobs:
         working-directory: apps/weather_lambda
         run: |
           aws lambda update-function-code \
-            --function-name coe558-project-weather \
+            --function-name coe-558-project-weather \
             --zip-file fileb://weather-lambda.zip
