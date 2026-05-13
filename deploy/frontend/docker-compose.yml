@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.7
     container_name: frontend-traefik
     restart: unless-stopped
     command:
@@ -13,7 +13,7 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik.yml:/etc/traefik/traefik.yml:ro"
-      - "./acme.json:/letsencrypt/acme.json"
+      - "./letsencrypt/acme.json:/letsencrypt/acme.json"
 
   frontend:
     image: ghcr.io/a-alem/coe558-frontend:latest
@@ -26,7 +26,9 @@ services:
       - "traefik.http.routers.frontend.tls=true"
       - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN}`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.service=frontend"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
 networks:

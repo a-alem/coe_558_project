@@ -14,7 +14,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
       - "./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro"
-      - "./traefik/acme.json:/letsencrypt/acme.json"
+      - "./traefik/letsencrypt/acme.json:/letsencrypt/acme.json"
 
   genai-service:
     image: ghcr.io/a-alem/coe558-genai-service:latest
@@ -60,13 +60,13 @@ services:
       - "traefik.http.middlewares.backend-results-strip.stripprefix.prefixes=/api"
       - "traefik.http.routers.backend-results.middlewares=backend-results-strip"
       - "traefik.http.routers.backend-health.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api/backend`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
       - "traefik.http.routers.backend-health.entrypoints=websecure"
       - "traefik.http.routers.backend-health.tls=true"
       - "traefik.http.routers.backend-health.tls.certresolver=letsencrypt"
       - "traefik.http.routers.backend-health.service=backend"
       - "traefik.http.middlewares.backend-health-strip.stripprefix.prefixes=/api/backend"
       - "traefik.http.routers.backend-health.middlewares=backend-health-strip"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
 
   mongodb:
     image: mongo:7

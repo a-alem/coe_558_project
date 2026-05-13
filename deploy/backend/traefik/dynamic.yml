@@ -19,5 +19,6 @@ http:
   services:
     weather-lambda:
       loadBalancer:
+        passHostHeader: false
         servers:
           - url: "https://5mtgt4rjqcnuyakhf4rmphtphi0yozaf.lambda-url.eu-central-1.on.aws"
