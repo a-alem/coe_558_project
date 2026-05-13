@@ -88,21 +88,20 @@ services:
     restart: unless-stopped
     environment:
       SWAGGER_JSON: /openapi/openapi.yaml
+      BASE_URL: /docs
     volumes:
-      - "../../api/openapi.yaml:/openapi/openapi.yaml:ro"
+      - "${OPENAPI_FILE_PATH:-../../api_docs/openapi.yaml}:/openapi/openapi.yaml:ro"
     networks:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.swagger.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/docs`)"
+      - "traefik.http.routers.swagger.rule=Host(`api.coe558projectkfupm.com`) && PathPrefix(`/docs`)"
       - "traefik.http.routers.swagger.entrypoints=websecure"
       - "traefik.http.routers.swagger.tls=true"
       - "traefik.http.routers.swagger.tls.certresolver=letsencrypt"
       - "traefik.http.routers.swagger.service=swagger"
-      - "traefik.http.middlewares.swagger-strip.stripprefix.prefixes=/docs"
-      - "traefik.http.routers.swagger.middlewares=swagger-strip"
+      - "traefik.http.routers.swagger.middlewares=cors@file"
       - "traefik.http.services.swagger.loadbalancer.server.port=8080"
-      - "traefik.http.routers.swagger.middlewares=swagger-strip,cors@file"
 
 networks:
   backend:

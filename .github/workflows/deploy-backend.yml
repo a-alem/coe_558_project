@@ -27,9 +27,15 @@ jobs:
 
       - name: Copy backend compose files
         run: |
-          ssh -i ~/.ssh/backend_key ubuntu@${{ vars.BACKEND_HOST }} "mkdir -p ~/coe558/deploy/backend"
-          scp -i ~/.ssh/backend_key -r deploy/backend/* ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/deploy/backend/
-          scp -i ~/.ssh/backend_key api_docs/openapi.yaml ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/api-openapi.yaml
+          ssh -i ~/.ssh/backend_key ubuntu@${{ vars.BACKEND_HOST }} "mkdir -p ~/coe558/backend"
+
+          scp -i ~/.ssh/backend_key -r deploy/backend/* \
+            ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/backend/
+
+          ssh -i ~/.ssh/backend_key ubuntu@${{ vars.BACKEND_HOST }} "mkdir -p ~/coe558/backend/api_docs"
+
+          scp -i ~/.ssh/backend_key api_docs/openapi.yaml \
+            ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/backend/api_docs/openapi.yaml
 
       - name: Deploy backend
         run: |
@@ -53,6 +59,7 @@ jobs:
           MONGO_ROOT_PASSWORD=${{ secrets.MONGO_ROOT_PASSWORD }}
           MONGO_DB=${{ vars.MONGO_DB }}
           MONGO_COLLECTION=${{ vars.MONGO_COLLECTION }}
+          OPENAPI_FILE_PATH=${{ vars.OPENAPI_FILE_PATH }}
           ENV
 
           docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}

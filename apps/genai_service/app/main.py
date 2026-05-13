@@ -150,7 +150,7 @@ def should_generate_image(prompt: str, output_type: Optional[str]) -> bool:
 
     return any(keyword in prompt_lower for keyword in image_keywords)
 
-
+# Health API
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "genai"}
