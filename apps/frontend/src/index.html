@@ -46,10 +46,12 @@
             <div class="col-lg-8">
                 <span class="hero-badge">KFUPM Cloud & Edge Computing</span>
                 <h1 class="hero-title mt-3">
-                    Weather Insights and GenAI Results
+                    Weather Insights and GenAI Media Results in One Simple Cloud App
                 </h1>
                 <p class="hero-text">
-                    A lightweight Bootstrap frontend connected to Traefik API Gateway and Reverse Proxy that handles TLS termination, CI/CD fully developed and containers are deployed automatically to the EC2 instances, all of this is declared and maintained by Terraform to comply with IaC principles.
+                    A lightweight Bootstrap frontend connected to Traefik API Gateway and Reverse Proxy that handles TLS termination,
+                    CI/CD fully developed and containers are deployed automatically to the EC2 instances,
+                    all of this is declared and maintained by Terraform to comply with IaC principles.
                 </p>
             </div>
 
@@ -106,32 +108,105 @@
         <div class="card-header-custom">
             <div>
                 <h2>GenAI Service</h2>
-                <p>Send a prompt to the GenAI containerized service and view the result.</p>
+                <p>Generate text/images or ask questions about uploaded media.</p>
             </div>
             <span class="section-icon">✨</span>
         </div>
 
         <div class="card-body p-4">
-            <label class="form-label">Prompt</label>
-            <textarea
-                    id="promptInput"
-                    class="form-control app-input mb-3"
-                    rows="4"
-                    placeholder="Example: Generate image of a cute duck floating on a pond..."
-            ></textarea>
+            <ul class="nav nav-pills app-tabs mb-4" id="genaiTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button
+                            class="nav-link active"
+                            id="generate-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#generate-pane"
+                            type="button"
+                            role="tab"
+                    >
+                        Generate Text / Image
+                    </button>
+                </li>
 
-            <div class="d-flex flex-wrap gap-2">
-                <button id="generateBtn" class="btn btn-gradient-success">
-                    Generate
-                </button>
+                <li class="nav-item" role="presentation">
+                    <button
+                            class="nav-link"
+                            id="media-question-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#media-question-pane"
+                            type="button"
+                            role="tab"
+                    >
+                        Ask About Media
+                    </button>
+                </li>
+            </ul>
 
-                <button id="saveBtn" class="btn btn-outline-success" disabled>
-                    Save Result
-                </button>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="generate-pane" role="tabpanel" tabindex="0">
+                    <label class="form-label">Prompt</label>
+                    <textarea
+                            id="promptInput"
+                            class="form-control app-input mb-3"
+                            rows="4"
+                            placeholder="Example: Generate image of a cute duck floating on a pond..."
+                    ></textarea>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Output Type</label>
+                            <select id="outputTypeSelect" class="form-select app-input">
+                                <option value="auto" selected>Auto Detect</option>
+                                <option value="text">Text</option>
+                                <option value="image">Image</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button id="generateBtn" class="btn btn-gradient-success">
+                            Generate
+                        </button>
+
+                        <button id="saveBtn" class="btn btn-outline-success" disabled>
+                            Save Result
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="media-question-pane" role="tabpanel" tabindex="0">
+                    <label class="form-label">Question</label>
+                    <textarea
+                            id="mediaPromptInput"
+                            class="form-control app-input mb-3"
+                            rows="3"
+                            placeholder="Example: What is in this image?"
+                    ></textarea>
+
+                    <label class="form-label">Upload image, audio, or video</label>
+                    <input
+                            id="mediaFileInput"
+                            class="form-control app-input mb-3"
+                            type="file"
+                            accept="image/*,audio/*,video/*"
+                    >
+
+                    <div id="mediaPreview" class="media-preview d-none mb-3"></div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button id="askMediaBtn" class="btn btn-gradient-success">
+                            Ask About Media
+                        </button>
+
+                        <button id="saveMediaAnswerBtn" class="btn btn-outline-success" disabled>
+                            Save Answer
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div id="genaiResultWrapper" class="result-panel d-none mt-4">
-                <div class="result-panel-header">Generated Result</div>
+                <div class="result-panel-header">GenAI Result</div>
                 <div id="genaiResult" class="generated-output"></div>
             </div>
         </div>
@@ -163,6 +238,7 @@
     </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

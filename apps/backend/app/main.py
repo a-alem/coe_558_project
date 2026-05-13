@@ -1,168 +1,259 @@
+import base64
 import os
-import requests
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
 from typing import Optional
+
+import boto3
+from bson import ObjectId
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from pymongo import MongoClient
 
 
 app = FastAPI(
-    title="S2 GenAI Service",
+    title="S3 Backend Service",
     version="1.0.0",
+    description="CRUD backend service for storing GenAI prompts, results, and media references.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://www.coe558projectkfupm.com",
+        "https://coe558projectkfupm.com",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
-class GenerateRequest(BaseModel):
-    prompt: str = Field(..., min_length=3, max_length=2000)
-    output_type: Optional[str] = Field(
-        default=None,
-        description="Use 'text' or 'image'. If omitted, image-like prompts are detected automatically.",
+MONGO_HOST = os.getenv("MONGO_HOST", "mongodb")
+MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
+MONGO_ROOT_USERNAME = os.getenv("MONGO_ROOT_USERNAME")
+MONGO_ROOT_PASSWORD = os.getenv("MONGO_ROOT_PASSWORD")
+
+MONGO_DB = os.getenv("MONGO_DB", "coe558")
+MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "genai_results")
+
+S3_BUCKET = os.getenv("S3_BUCKET")
+AWS_REGION = os.getenv("AWS_REGION", "me-south-1")
+
+
+if MONGO_ROOT_USERNAME and MONGO_ROOT_PASSWORD:
+    client = MongoClient(
+        host=MONGO_HOST,
+        port=MONGO_PORT,
+        username=MONGO_ROOT_USERNAME,
+        password=MONGO_ROOT_PASSWORD,
+        authSource="admin",
+    )
+else:
+    MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongodb:27017")
+    client = MongoClient(MONGO_URI)
+
+
+collection = client[MONGO_DB][MONGO_COLLECTION]
+s3 = boto3.client("s3", region_name=AWS_REGION)
+
+
+class ResultCreate(BaseModel):
+    prompt: str = Field(..., min_length=3)
+    result_text: str = Field(..., min_length=1)
+    provider: str = "gemini"
+    media_url: Optional[str] = None
+
+
+def serialize_doc(doc: dict) -> dict:
+    doc["id"] = str(doc["_id"])
+    del doc["_id"]
+    return doc
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def detect_extension_from_mime_type(mime_type: str) -> str:
+    mapping = {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/webp": "webp",
+        "image/gif": "gif",
+        "audio/mpeg": "mp3",
+        "audio/mp3": "mp3",
+        "audio/wav": "wav",
+        "video/mp4": "mp4",
+        "video/webm": "webm",
+    }
+
+    return mapping.get(mime_type, "bin")
+
+
+def upload_bytes_to_s3(
+        content: bytes,
+        filename: str,
+        content_type: str,
+) -> str:
+    if not S3_BUCKET:
+        raise HTTPException(status_code=500, detail="S3_BUCKET is not configured")
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
+    safe_filename = filename.replace("/", "-").replace("\\", "-")
+    object_key = f"uploads/{timestamp}-{safe_filename}"
+
+    s3.put_object(
+        Bucket=S3_BUCKET,
+        Key=object_key,
+        Body=content,
+        ContentType=content_type or "application/octet-stream",
     )
 
-
-class GenerateResponse(BaseModel):
-    prompt: str
-    result_text: str
-    provider: str = "gemini"
-    output_type: str
-    media_base64: Optional[str] = None
-    media_mime_type: Optional[str] = None
+    return f"s3://{S3_BUCKET}/{object_key}"
 
 
-def should_generate_image(prompt: str, output_type: Optional[str]) -> bool:
-    if output_type:
-        return output_type.lower() == "image"
+def parse_data_url(data_url: str) -> tuple[str, bytes]:
+    if not data_url.startswith("data:"):
+        raise ValueError("Not a data URL")
 
-    image_keywords = [
-        "generate image",
-        "create image",
-        "draw",
-        "photo of",
-        "picture of",
-        "image of",
-        "illustration of",
-        "logo",
-        "icon",
-        "poster",
-    ]
+    header, encoded = data_url.split(",", 1)
 
-    prompt_lower = prompt.lower()
-    return any(keyword in prompt_lower for keyword in image_keywords)
+    # Example header: data:image/png;base64
+    mime_type = header.replace("data:", "").replace(";base64", "")
 
-
-def extract_parts(data: dict):
-    try:
-        return data["candidates"][0]["content"]["parts"]
-    except (KeyError, IndexError, TypeError):
-        raise HTTPException(
-            status_code=502,
-            detail=f"Unexpected Gemini response format: {data}",
-        )
+    return mime_type, base64.b64decode(encoded)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "genai"}
-
-
-@app.post("/generate", response_model=GenerateResponse)
-def generate(req: GenerateRequest):
-    api_key = os.getenv("GEMINI_API_KEY")
-
-    if not api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured")
-
-    image_mode = should_generate_image(req.prompt, req.output_type)
-
-    if image_mode:
-        model = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
-        generation_config = {
-            "responseModalities": ["TEXT", "IMAGE"],
-            "responseFormat": {
-                "image": {
-                    "aspectRatio": "1:1"
-                }
-            }
-        }
-    else:
-        model = os.getenv("GEMINI_TEXT_MODEL", os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite"))
-        generation_config = None
-
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:generateContent"
-    )
-
-    headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": api_key,
+    return {
+        "status": "ok",
+        "service": "backend",
+        "database": MONGO_DB,
+        "collection": MONGO_COLLECTION,
     }
 
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": req.prompt}
-                ]
-            }
-        ]
+
+@app.post("/results")
+def create_result(req: ResultCreate):
+    doc = {
+        "prompt": req.prompt,
+        "result_text": req.result_text,
+        "provider": req.provider,
+        "media_url": req.media_url,
+        "created_at": now_iso(),
     }
 
-    if generation_config:
-        payload["generationConfig"] = generation_config
+    inserted = collection.insert_one(doc)
+    doc["_id"] = inserted.inserted_id
 
-    try:
-        res = requests.post(url, headers=headers, json=payload, timeout=90)
-        res.raise_for_status()
-        data = res.json()
+    return serialize_doc(doc)
 
-        parts = extract_parts(data)
 
-        text_parts = []
-        media_base64 = None
-        media_mime_type = None
+@app.post("/results/save-generated-media")
+def save_generated_media(req: ResultCreate):
+    """
+    Optional stronger endpoint:
+    Accepts a media_url data URL, uploads the decoded media to S3,
+    and stores only the S3 reference in MongoDB.
 
-        for part in parts:
-            if "text" in part:
-                text_parts.append(part["text"])
+    The current frontend can still use POST /results directly.
+    You can switch the frontend later to this endpoint if you want S3-backed generated images.
+    """
+    media_reference = req.media_url
 
-            inline_data = part.get("inlineData") or part.get("inline_data")
-            if inline_data:
-                media_base64 = inline_data.get("data")
-                media_mime_type = inline_data.get("mimeType") or inline_data.get("mime_type")
+    if req.media_url and req.media_url.startswith("data:"):
+        try:
+            mime_type, content = parse_data_url(req.media_url)
+            extension = detect_extension_from_mime_type(mime_type)
+            filename = f"generated-media.{extension}"
 
-        result_text = "\n".join(text_parts).strip()
-
-        if image_mode and not media_base64:
+            media_reference = upload_bytes_to_s3(
+                content=content,
+                filename=filename,
+                content_type=mime_type,
+            )
+        except Exception as e:
             raise HTTPException(
-                status_code=502,
-                detail={
-                    "message": "Gemini returned no image data.",
-                    "hint": "Check that GEMINI_IMAGE_MODEL supports image generation and that your API key has access/quota.",
-                    "raw_response": data,
-                },
+                status_code=400,
+                detail=f"Failed to parse/upload generated media: {str(e)}",
             )
 
-        return GenerateResponse(
-            prompt=req.prompt,
-            result_text=result_text or "Generated successfully.",
-            output_type="image" if image_mode else "text",
-            media_base64=media_base64,
-            media_mime_type=media_mime_type,
-        )
+    doc = {
+        "prompt": req.prompt,
+        "result_text": req.result_text,
+        "provider": req.provider,
+        "media_url": media_reference,
+        "created_at": now_iso(),
+    }
 
-    except requests.HTTPError as e:
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "message": "Gemini API error",
-                "status_code": e.response.status_code,
-                "body": e.response.text,
-            },
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to generate response: {str(e)}",
-        )
+    inserted = collection.insert_one(doc)
+    doc["_id"] = inserted.inserted_id
+
+    return serialize_doc(doc)
+
+
+@app.post("/results/upload")
+async def create_result_with_file(
+        prompt: str = Form(...),
+        result_text: str = Form(...),
+        provider: str = Form("gemini"),
+        file: UploadFile = File(...),
+):
+    content = await file.read()
+
+    media_url = upload_bytes_to_s3(
+        content=content,
+        filename=file.filename or "uploaded-media",
+        content_type=file.content_type or "application/octet-stream",
+    )
+
+    doc = {
+        "prompt": prompt,
+        "result_text": result_text,
+        "provider": provider,
+        "media_url": media_url,
+        "created_at": now_iso(),
+    }
+
+    inserted = collection.insert_one(doc)
+    doc["_id"] = inserted.inserted_id
+
+    return serialize_doc(doc)
+
+
+@app.get("/results")
+def list_results():
+    docs = collection.find().sort("created_at", -1)
+    return [serialize_doc(doc) for doc in docs]
+
+
+@app.get("/results/{result_id}")
+def get_result(result_id: str):
+    if not ObjectId.is_valid(result_id):
+        raise HTTPException(status_code=400, detail="Invalid result id")
+
+    doc = collection.find_one({"_id": ObjectId(result_id)})
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="Result not found")
+
+    return serialize_doc(doc)
+
+
+@app.delete("/results/{result_id}")
+def delete_result(result_id: str):
+    if not ObjectId.is_valid(result_id):
+        raise HTTPException(status_code=400, detail="Invalid result id")
+
+    result = collection.delete_one({"_id": ObjectId(result_id)})
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Result not found")
+
+    return {
+        "deleted": True,
+        "id": result_id,
+    }
