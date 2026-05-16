@@ -87,9 +87,9 @@ services:
     container_name: swagger-ui
     restart: unless-stopped
     environment:
-      SWAGGER_JSON: /openapi/openapi.yaml
+      SWAGGER_JSON_URL: /openapi.yaml
     volumes:
-      - "${OPENAPI_FILE_PATH:-./api_docs/openapi.yaml}:/openapi/openapi.yaml:ro"
+      - "${OPENAPI_FILE_PATH:-./api_docs/openapi.yaml}:/usr/share/nginx/html/openapi.yaml:ro"
     networks:
       - backend
     labels:
@@ -101,7 +101,7 @@ services:
       - "traefik.http.routers.swagger.service=swagger"
       - "traefik.http.middlewares.swagger-strip.stripprefix.prefixes=/docs"
       - "traefik.http.routers.swagger.middlewares=swagger-strip,cors@file"
-      - "traefik.http.routers.swagger-assets.rule=Host(`${API_DOMAIN}`) && (PathPrefix(`/swagger-ui`) || Path(`/index.css`) || Path(`/swagger-initializer.js`) || Path(`/favicon-32x32.png`) || Path(`/favicon-16x16.png`) || Path(`/oauth2-redirect.html`))"
+      - "traefik.http.routers.swagger-assets.rule=Host(`${API_DOMAIN}`) && (PathPrefix(`/swagger-ui`) || Path(`/index.css`) || Path(`/swagger-initializer.js`) || Path(`/favicon-32x32.png`) || Path(`/favicon-16x16.png`) || Path(`/oauth2-redirect.html`) || Path(`/openapi.yaml`))"
       - "traefik.http.routers.swagger-assets.entrypoints=websecure"
       - "traefik.http.routers.swagger-assets.tls=true"
       - "traefik.http.routers.swagger-assets.tls.certresolver=letsencrypt"
