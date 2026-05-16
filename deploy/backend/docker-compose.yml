@@ -88,7 +88,6 @@ services:
     restart: unless-stopped
     environment:
       SWAGGER_JSON: /openapi/openapi.yaml
-      BASE_URL: /docs
     volumes:
       - "${OPENAPI_FILE_PATH:-../../api_docs/openapi.yaml}:/openapi/openapi.yaml:ro"
     networks:
@@ -102,6 +101,13 @@ services:
       - "traefik.http.routers.swagger.service=swagger"
       - "traefik.http.routers.swagger.middlewares=cors@file"
       - "traefik.http.services.swagger.loadbalancer.server.port=8080"
+      - "traefik.http.routers.swagger-assets.entrypoints=websecure"
+      - "traefik.http.routers.swagger-assets.tls=true"
+      - "traefik.http.routers.swagger-assets.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.swagger-assets.service=swagger"
+      - "traefik.http.routers.swagger-assets.middlewares=cors@file"
+      # For Swagger UI static assets
+      - "traefik.http.routers.swagger-assets.rule=Host(`api.coe558projectkfupm.com`) && (Path(`/swagger-ui.css`) || Path(`/index.css`) || Path(`/swagger-ui-bundle.js`) || Path(`/swagger-ui-standalone-preset.js`) || Path(`/swagger-initializer.js`) || Path(`/favicon-32x32.png`) || Path(`/favicon-16x16.png`) || Path(`/oauth2-redirect.html`))"
 
 networks:
   backend:
