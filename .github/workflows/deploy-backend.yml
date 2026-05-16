@@ -5,14 +5,20 @@ on:
     workflows: ["Build and Push Docker Images"]
     types:
       - completed
+
   push:
     branches: [ "master" ]
     paths:
       - ".github/workflows/deploy-backend.yml"
+      - "deploy/backend/**"
+      - "api_docs/openapi.yaml"
+
+  workflow_dispatch:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
     runs-on: ubuntu-latest
 
     steps:
@@ -27,15 +33,33 @@ jobs:
 
       - name: Copy backend compose files
         run: |
-          ssh -i ~/.ssh/backend_key ubuntu@${{ vars.BACKEND_HOST }} "mkdir -p ~/coe558/backend"
+          ssh -i ~/.ssh/backend_key ubuntu@${{ vars.BACKEND_HOST }} << 'EOF'
+          set -e
 
-          scp -i ~/.ssh/backend_key -r deploy/backend/* \
-            ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/backend/
+          mkdir -p ~/coe558/deploy/backend
+          mkdir -p ~/coe558/deploy/backend/traefik
+          mkdir -p ~/coe558/deploy/backend/traefik/letsencrypt
+          mkdir -p ~/coe558/deploy/backend/api_docs
 
-          ssh -i ~/.ssh/backend_key ubuntu@${{ vars.BACKEND_HOST }} "mkdir -p ~/coe558/backend/api_docs"
+          touch ~/coe558/deploy/backend/traefik/letsencrypt/acme.json
+          chmod 600 ~/coe558/deploy/backend/traefik/letsencrypt/acme.json
+          EOF
 
-          scp -i ~/.ssh/backend_key api_docs/openapi.yaml \
-            ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/backend/api_docs/openapi.yaml
+          scp -i ~/.ssh/backend_key \
+            deploy/backend/docker-compose.yml \
+            ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/deploy/backend/docker-compose.yml
+
+          scp -i ~/.ssh/backend_key \
+            deploy/backend/traefik/traefik.yml \
+            ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/deploy/backend/traefik/traefik.yml
+
+          scp -i ~/.ssh/backend_key \
+            deploy/backend/traefik/dynamic.yml \
+            ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/deploy/backend/traefik/dynamic.yml
+
+          scp -i ~/.ssh/backend_key \
+            api_docs/openapi.yaml \
+            ubuntu@${{ vars.BACKEND_HOST }}:~/coe558/deploy/backend/api_docs/openapi.yaml
 
       - name: Deploy backend
         run: |
@@ -44,26 +68,57 @@ jobs:
 
           cd ~/coe558/deploy/backend
 
-          touch traefik/acme.json
-          chmod 600 traefik/acme.json
+          touch traefik/letsencrypt/acme.json
+          chmod 600 traefik/letsencrypt/acme.json
 
           cat > .env << ENV
           API_DOMAIN=${{ vars.API_DOMAIN }}
           AWS_REGION=${{ vars.AWS_REGION }}
           S3_BUCKET=${{ vars.S3_BUCKET }}
+
           GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
           GEMINI_IMAGE_MODEL=${{ vars.GEMINI_IMAGE_MODEL }}
           GEMINI_MULTIMODAL_MODEL=${{ vars.GEMINI_MULTIMODAL_MODEL }}
           GEMINI_TEXT_MODEL=${{ vars.GEMINI_TEXT_MODEL }}
+
+          MONGO_HOST=mongodb
+          MONGO_PORT=27017
           MONGO_ROOT_USERNAME=${{ vars.MONGO_ROOT_USERNAME }}
           MONGO_ROOT_PASSWORD=${{ secrets.MONGO_ROOT_PASSWORD }}
           MONGO_DB=${{ vars.MONGO_DB }}
           MONGO_COLLECTION=${{ vars.MONGO_COLLECTION }}
-          OPENAPI_FILE_PATH=${{ vars.OPENAPI_FILE_PATH }}
+
+          OPENAPI_FILE_PATH=./api_docs/openapi.yaml
           ENV
 
           docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+
           docker compose pull
-          docker compose up -d
+          docker compose up -d --force-recreate --remove-orphans
           docker image prune -f
+          EOF
+
+      - name: Verify Swagger UI deployment
+        run: |
+          ssh -i ~/.ssh/backend_key ubuntu@${{ vars.BACKEND_HOST }} << 'EOF'
+          set -e
+
+          cd ~/coe558/deploy/backend
+
+          echo "Compose working directory:"
+          docker inspect swagger-ui \
+            --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' || true
+
+          echo ""
+          echo "Swagger labels:"
+          docker inspect swagger-ui --format '{{ json .Config.Labels }}' | jq -r '
+            to_entries[]
+            | select(.key | contains("swagger"))
+            | "\(.key)=\(.value)"
+          ' || true
+
+          echo ""
+          echo "OpenAPI file inside Swagger container:"
+          docker exec swagger-ui ls -l /openapi || true
+          docker exec swagger-ui head -5 /openapi/openapi.yaml || true
           EOF

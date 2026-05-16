@@ -125,7 +125,7 @@ def parse_data_url(data_url: str) -> tuple[str, bytes]:
 
     return mime_type, base64.b64decode(encoded)
 
-# Health APIs
+# Health API
 @app.get("/health")
 def health():
     return {

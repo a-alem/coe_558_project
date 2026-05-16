@@ -89,25 +89,25 @@ services:
     environment:
       SWAGGER_JSON: /openapi/openapi.yaml
     volumes:
-      - "${OPENAPI_FILE_PATH:-../../api_docs/openapi.yaml}:/openapi/openapi.yaml:ro"
+      - "${OPENAPI_FILE_PATH:-./api_docs/openapi.yaml}:/openapi/openapi.yaml:ro"
     networks:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.swagger.rule=Host(`api.coe558projectkfupm.com`) && PathPrefix(`/docs`)"
+      - "traefik.http.routers.swagger.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/docs`)"
       - "traefik.http.routers.swagger.entrypoints=websecure"
       - "traefik.http.routers.swagger.tls=true"
       - "traefik.http.routers.swagger.tls.certresolver=letsencrypt"
       - "traefik.http.routers.swagger.service=swagger"
-      - "traefik.http.routers.swagger.middlewares=cors@file"
-      - "traefik.http.services.swagger.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.swagger-strip.stripprefix.prefixes=/docs"
+      - "traefik.http.routers.swagger.middlewares=swagger-strip,cors@file"
+      - "traefik.http.routers.swagger-assets.rule=Host(`${API_DOMAIN}`) && (PathPrefix(`/swagger-ui`) || Path(`/index.css`) || Path(`/swagger-initializer.js`) || Path(`/favicon-32x32.png`) || Path(`/favicon-16x16.png`) || Path(`/oauth2-redirect.html`))"
       - "traefik.http.routers.swagger-assets.entrypoints=websecure"
       - "traefik.http.routers.swagger-assets.tls=true"
       - "traefik.http.routers.swagger-assets.tls.certresolver=letsencrypt"
       - "traefik.http.routers.swagger-assets.service=swagger"
       - "traefik.http.routers.swagger-assets.middlewares=cors@file"
-      # For Swagger UI static assets
-      - "traefik.http.routers.swagger-assets.rule=Host(`api.coe558projectkfupm.com`) && (Path(`/swagger-ui.css`) || Path(`/index.css`) || Path(`/swagger-ui-bundle.js`) || Path(`/swagger-ui-standalone-preset.js`) || Path(`/swagger-initializer.js`) || Path(`/favicon-32x32.png`) || Path(`/favicon-16x16.png`) || Path(`/oauth2-redirect.html`))"
+      - "traefik.http.services.swagger.loadbalancer.server.port=8080"
 
 networks:
   backend:
